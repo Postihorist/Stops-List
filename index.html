@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="page.css">
+</head>
+<h1>Bus Stops List</h1>
+<select id="selectRegion">
+    <option value="" disabled selected>Select a region</option>
+</select>
+<script>
+    async function fetchStopAreas() {
+        const response = await fetch('/stop-areas');
+        var geo = await fetch('/city').then(res => {return res.text();});
+        //var geo = "Narva;162579" //Placeholder
+        geo = geo.split(';');
+        var data = await response.json();
+        data = [...new Set(data.stopAreas)].sort()
+        const city = document.getElementById("selectRegion");
+        data.forEach(option => {
+            const newOption = document.createElement("option");
+            newOption.value = option;
+            newOption.textContent = option;
+            city.appendChild(newOption);
+        });
+        city.value = geo[0];
+    }
+    window.onload = fetchStopAreas;
+</script>
+<button id="submitRegion" onclick="findStops()">Submit Selection</button>
+<select id="selectStop" onchange="updateSelect()">
+    <option value="" disabled selected>Select a stop</option>
+</select>
+<ul id="listTime">
+</ul> 
+<script>
+    async function findStops() {
+        const region = document.getElementById('selectRegion').value;
+        var geo = await fetch('/city').then(res => {return res.text();}); //Quota limited
+        //var geo = "Narva;162579" //Placeholder
+        geo = geo.split(';');
+        const response = await fetch('/find-stops', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ region })
+        });
+        var data = await response.json();
+        data = [...new Set(data.stopNames)].sort()
+        const stops = document.getElementById('selectStop'); 
+        var i, L = stops.options.length - 1;
+        for(i = L; i >= 0; i--) {
+            stops.remove(i);
+        }
+        data.forEach(option => {
+            option = option.split(";")
+            const newOption = document.createElement("option");
+            newOption.value = option[1];
+            newOption.textContent = option[0];
+            stops.appendChild(newOption);
+            if (option = geo[1]) {
+                stops.value = geo[1];
+            }
+        });
+        updateSelect();
+    }
+    async function updateSelect() {
+        const stops = document.getElementById('selectStop').value;
+        const response = await fetch('/find-times', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stops })
+        });
+        var data = await response.json();
+        data = [...new Set(data.stopTimes)].sort()
+        const times = document.getElementById('listTime'); 
+        while(times.firstChild){
+            times.removeChild(times.firstChild);
+        }
+        data.forEach(option => {
+            const newItem = document.createElement('li');
+            newItem.textContent = option.replace(";", " ");
+            document.getElementById('listTime').appendChild(newItem);
+        });
+    }
+</script>
+<style>
+    body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f9f9f9;
+    font-family: Arial, sans-serif;
+  }
+  
+  #selectRegion, #selectStop {
+    width: 50%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+  }
+  
+  #submitRegion {
+    padding: 10px 20px;
+    margin: 10px 0;
+    background-color: #5894d4;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  #submitRegion:hover {
+    background-color: #80acdb;
+  }
+
+  #listTime {
+    list-style-type: none;
+    padding: 0;
+    margin: 20px 0;
+    width: 50%;
+    overflow-y: auto;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  #listTime li {
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+    font-size: 16px;
+  }
+  
+  #listTime li:last-child {
+    border-bottom: none;
+  }
+</style>
+</html>
